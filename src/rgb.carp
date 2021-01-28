@@ -1,0 +1,37 @@
+(load "../deps.carp")
+
+(deftype RGB [r Byte g Byte b Byte])
+
+(defmodule RGB
+  (defn- f2b [f]
+    (let [i &(Float.to-int f)]
+      (if (< @i 0)
+        0b
+        (if (> @i 255)
+          255b
+          (Byte.from-int @i)))))
+  (defn transform-hue [rgb hue]
+    (with Float
+      (let [cosA &(cos (/ (* hue pi) 180f))
+            sinA &(sin (/ (* hue pi) 180f))
+            rf &(Float.from-int (Byte.to-int @(RGB.r &rgb)))
+            gf &(Float.from-int (Byte.to-int @(RGB.g &rgb)))
+            bf &(Float.from-int (Byte.to-int @(RGB.b &rgb)))
+            mx-zero-zero (+ @cosA (/ (- 1f @cosA) 3f))
+            mx-zero-one  (- (* (/ 1f 3f) (- 1f @cosA)) (* (sqrt (/ 1f 3f)) @sinA))
+            mx-zero-two  (+ (* (* (/ 1f 3f) (- 1f @cosA)) (sqrt (/ 1f 3f))) @sinA)
+            mx-one-zero  (+ (* (/ 1f 2f) (- 1f @cosA)) (* (sqrt (/ 1f 3f)) @sinA))
+            mx-one-one   (+ @cosA (* (/ 1f 3f) (- 1f @cosA)))
+            mx-one-two   (- (* (/ 1f 3f) (- 1f @cosA)) (* (sqrt (/ 1f 3f)) @sinA))
+            mx-two-zero  (- (* (/ 1f 3f) (- 1f @cosA)) (* (sqrt (/ 1f 3f)) @sinA))
+            mx-two-one   (+ (* (/ 1f 3f) (- 1f @cosA)) (* (sqrt (/ 1f 3f)) @sinA))
+            mx-two-two   (+ @cosA (* (/ 1f 3f) (- 1f @cosA)))]
+        (init (f2b (+ (* @rf mx-zero-zero)
+                      (+ (* @gf mx-zero-one)
+                         (* @bf mx-zero-two))))
+              (f2b (+ (* @rf mx-one-zero)
+                      (+ (* @gf mx-one-one)
+                         (* @bf mx-one-two))))
+              (f2b (+ (* @rf mx-two-zero)
+                      (+ (* @gf mx-two-one)
+                         (* @bf mx-two-two)))))))))

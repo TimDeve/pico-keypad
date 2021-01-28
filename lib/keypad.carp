@@ -1,0 +1,37 @@
+(relative-include "keypad.h")
+
+(defmodule PicoKeypad
+ (register init (Fn [] ()) "PicoKeypad__init")
+ (register set-brightness (Fn [Float] ()) "PicoKeypad__set_brightness")
+ (register illuminate (Fn [Int Byte Byte Byte] ()) "PicoKeypad__illuminate")
+ (register update (Fn [] ()) "PicoKeypad__update")
+ (register get-buttons-state (Fn [] Uint16) "PicoKeypad__get_button_states")
+
+ (register pads-number Int "PicoKeypad__PadsNumber")
+
+ (defn pressed [buttons_state button] (not (= (Uint16.zero) (Uint16.bit-and buttons_state button))))
+
+ (deftemplate key-0 Uint16 "const uint16_t $NAME = 1" "")
+ (deftemplate key-1 Uint16 "const uint16_t $NAME = 2" "")
+ (deftemplate key-2 Uint16 "const uint16_t $NAME = 4" "")
+ (deftemplate key-3 Uint16 "const uint16_t $NAME = 8" "")
+ (deftemplate key-4 Uint16 "const uint16_t $NAME = 16" "")
+ (deftemplate key-5 Uint16 "const uint16_t $NAME = 32" "")
+ (deftemplate key-6 Uint16 "const uint16_t $NAME = 64" "")
+ (deftemplate key-7 Uint16 "const uint16_t $NAME = 128" "")
+ (deftemplate key-8 Uint16 "const uint16_t $NAME = 256" "")
+ (deftemplate key-9 Uint16 "const uint16_t $NAME = 512" "")
+ (deftemplate key-10 Uint16 "const uint16_t $NAME = 1024" "")
+ (deftemplate key-11 Uint16 "const uint16_t $NAME = 2048" "")
+ (deftemplate key-12 Uint16 "const uint16_t $NAME = 4096" "")
+ (deftemplate key-13 Uint16 "const uint16_t $NAME = 8192" "")
+ (deftemplate key-14 Uint16 "const uint16_t $NAME = 16384" "")
+ (deftemplate key-15 Uint16 "const uint16_t $NAME = 32768" "")
+
+ (defn key [i]
+  (-> $[key-0 key-1 key-2 key-3
+        key-4 key-5 key-6 key-7
+        key-8 key-9 key-10 key-11
+        key-12 key-13 key-14 key-15]
+      (StaticArray.nth i)
+      (Maybe.or-zero))))

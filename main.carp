@@ -1,0 +1,121 @@
+(load "config.carp")
+
+(load "lib/carp-core.carp")
+(load "lib/pico.carp")
+(load "lib/keypad.carp")
+
+(load "deps.carp")
+
+(load "src/rgb.carp")
+
+(deftype Layer
+ One
+ Two
+ Three
+ Four)
+
+(deftype HueAnimation
+ (Clockwise [Float])
+ (AntiClockwise [Float]))
+
+(deftype Brightness
+  None
+  Dim
+  Mid
+  Bright)
+
+(defn get-brightness [setting]
+  (with Brightness
+   (match-ref setting
+    None 0f
+    Dim 0.05f
+    Mid 0.4f
+    Bright 1f)))
+
+(defn hue-start [layer]
+  (match-ref layer
+    (Layer.One) 100f
+    (Layer.Two) 0f
+    (Layer.Three) 240f
+    (Layer.Four) 0f))
+
+(defn hue-end [layer]
+  (match-ref layer
+    (Layer.One) 240f
+    (Layer.Two) 100f
+    (Layer.Three) 340f
+    (Layer.Four) 359f))
+
+(defn rotate-hue-back-and-forth [hue start end]
+  (match-ref hue
+    (HueAnimation.Clockwise degree)
+    (if (> degree &(- @&end 1f))
+      (HueAnimation.AntiClockwise end)
+      (HueAnimation.Clockwise (inc @degree)))
+    (HueAnimation.AntiClockwise degree)
+    (if (< degree &(+ @&start 1f))
+      (HueAnimation.Clockwise start)
+      (HueAnimation.AntiClockwise (dec @degree)))))
+
+(defn get-hue-degree [hue]
+  (match-ref hue
+    (HueAnimation.Clockwise degree) degree
+    (HueAnimation.AntiClockwise degree) degree))
+
+(defn update-hue [layer hue]
+  (match-ref layer
+    (Layer.Four)
+    (do
+      (Sys.sleep-ms 16)
+      (HueAnimation.Clockwise (inc @(get-hue-degree hue))))
+    _
+    (do
+      (Sys.sleep-ms 100)
+      (rotate-hue-back-and-forth hue (hue-start layer) (hue-end layer)))))
+
+(deftype State [layer Layer
+                hue HueAnimation
+                last_buttons Uint16
+                brightness Brightness])
+
+(defn-do main []
+  (PicoKeypad.init)
+  (let [state (State.init (Layer.One)
+                          (HueAnimation.Clockwise (hue-start &(Layer.One)))
+                          (PicoKeypad.get-buttons-state)
+                          (Brightness.Dim))]
+    (while true
+     (let-do [buttons (PicoKeypad.get-buttons-state) layer (State.layer &state)]
+       (PicoKeypad.set-brightness (get-brightness (State.brightness &state)))
+       (State.set-hue! &state (update-hue layer (State.hue &state)))
+       (for [i 0 PicoKeypad.pads-number]
+         (let [rgb &(RGB.transform-hue (RGB 255b 0b 0b) (+ @(get-hue-degree (State.hue &state)) (Float.from-int (* i 5))))]
+           (PicoKeypad.illuminate i @(RGB.r rgb) @(RGB.g rgb) @(RGB.b rgb))))
+       (when (not (= &buttons (State.last_buttons &state)))
+        (do
+          (when (PicoKeypad.pressed buttons PicoKeypad.key-8)
+            (State.set-brightness! &state (Brightness.None)))
+          (when (PicoKeypad.pressed buttons PicoKeypad.key-9)
+            (State.set-brightness! &state (Brightness.Dim)))
+          (when (PicoKeypad.pressed buttons PicoKeypad.key-10)
+            (State.set-brightness! &state (Brightness.Mid)))
+          (when (PicoKeypad.pressed buttons PicoKeypad.key-11)
+            (State.set-brightness! &state (Brightness.Bright)))
+          (when (PicoKeypad.pressed buttons PicoKeypad.key-12)
+            (do
+              (State.set-layer! &state (Layer.One))
+              (State.set-hue! &state (HueAnimation.Clockwise (hue-start layer)))))
+          (when (PicoKeypad.pressed buttons PicoKeypad.key-13)
+            (do
+              (State.set-layer! &state (Layer.Two))
+              (State.set-hue! &state (HueAnimation.Clockwise (hue-start layer)))))
+          (when (PicoKeypad.pressed buttons PicoKeypad.key-14)
+            (do
+              (State.set-layer! &state (Layer.Three))
+              (State.set-hue! &state (HueAnimation.Clockwise (hue-start layer)))))
+          (when (PicoKeypad.pressed buttons PicoKeypad.key-15)
+            (do
+              (State.set-layer! &state (Layer.Four))
+              (State.set-hue! &state (HueAnimation.Clockwise (hue-start layer)))))))
+       (PicoKeypad.update)))))
+
