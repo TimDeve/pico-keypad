@@ -1,39 +1,53 @@
 cmake_minimum_required(VERSION 3.12)
 
-# Pull in PICO SDK (must be before project)
-set(PICO_SDK_FETCH_FROM_GIT on)
+set(NAME pico-keypad)
+
+include(pimoroni_pico_import.cmake)
 include(pico_sdk_import.cmake)
 
-include_directories($ENV{CARP_DIR}/core)
-
-project(pico_keypad_project C CXX ASM)
+project(${NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-
-# Initialize the SDK
 pico_sdk_init()
 
+include_directories(
+  ${CMAKE_CURRENT_LIST_DIR}
+  $ENV{CARP_DIR}/core
+)
+
+add_subdirectory(pimoroni-pico/common)
 add_subdirectory(pimoroni-pico/drivers)
 add_subdirectory(pimoroni-pico/libraries)
 
 file(GLOB_RECURSE CARP_FILES ${PROJECT_SOURCE_DIR}/*.carp)
 
 add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/carp-out/main.c
-    COMMAND carp -b --no-core ${CMAKE_CURRENT_SOURCE_DIR}/main.carp
-    DEPENDS ${CARP_FILES}
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/carp-out/main.c
+  COMMAND carp -b --no-core ${CMAKE_CURRENT_SOURCE_DIR}/main.carp
+  DEPENDS ${CARP_FILES}
 )
 
-add_executable(
-  pico_keypad
+# Source files
+add_executable(${NAME}
   lib/keypad.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/carp-out/main.c
 )
 
-# Pull in pico libraries that we need
-target_link_libraries(pico_keypad pico_stdlib pico_rgb_keypad)
+# Libraries
+target_link_libraries(${NAME}
+  pico_stdlib
+  pico_rgb_keypad
+)
 
-# create map/bin/hex file etc.
-pico_add_extra_outputs(pico_keypad)
+pico_add_extra_outputs(${NAME})
 
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/${NAME}.uf2
+    ${CMAKE_CURRENT_LIST_DIR}/README.md
+    DESTINATION .
+)
+
+set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
+set(CPACK_GENERATOR "ZIP" "TGZ")
+include(CPack)

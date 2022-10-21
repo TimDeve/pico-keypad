@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := build
 
 pimoroni-pico:
-	degit --force "https://github.com/pimoroni/pimoroni-pico.git#v0.0.5" pimoroni-pico
+	degit --force "https://github.com/pimoroni/pimoroni-pico.git#v1.19.9" pimoroni-pico
 
 scaffold/Makefile: pimoroni-pico
 	cmake -S . -B scaffold
@@ -12,4 +12,8 @@ build: scaffold/Makefile
 
 .PHONY := clean
 clean:
-	rm -rf scaffold
+	cd scaffold && rm -rf carp-out && $(MAKE) clean
+
+.PHONY := nuke
+nuke:
+	rm -rf scaffold pimoroni-pico
