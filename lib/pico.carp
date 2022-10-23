@@ -1,7 +1,8 @@
 (system-include "pico/stdlib.h")
 
 (defmodule Sys
- (register sleep-ms (Fn [Int] ()) "sleep_ms"))
+ (register sleep-ms (Fn [Int] ()) "sleep_ms")
+ (register millis (Fn [] Int) "board_millis"))
 
 (defmodule GPIO
  (deftemplate led-pin Int "const int $NAME = 25" "")

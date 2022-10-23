@@ -3,8 +3,8 @@
 (load "lib/carp-core.carp")
 (load "lib/pico.carp")
 (load "lib/keypad.carp")
-
-(load "deps.carp")
+(load "lib/usb.carp")
+(load "lib/key.carp")
 
 (load "src/rgb.carp")
 
@@ -62,23 +62,76 @@
     (HueAnimation.Clockwise degree) degree
     (HueAnimation.AntiClockwise degree) degree))
 
+(register ready-for-animation (Fn [Int] Bool) "ready_for_animation")
+
 (defn update-hue [layer hue]
   (match-ref layer
     (Layer.Four)
-    (do
-      (Sys.sleep-ms 16)
-      (HueAnimation.Clockwise (inc @(get-hue-degree hue))))
+    (if (ready-for-animation 16)
+      (HueAnimation.Clockwise (inc @(get-hue-degree hue)))
+      @hue)
     _
-    (do
-      (Sys.sleep-ms 100)
-      (rotate-hue-back-and-forth hue (hue-start layer) (hue-end layer)))))
+    (if (ready-for-animation 100)
+      (rotate-hue-back-and-forth hue (hue-start layer) (hue-end layer))
+      @hue)))
 
 (deftype State [layer Layer
                 hue HueAnimation
                 last_buttons Uint16
                 brightness Brightness])
 
+(register hid-task (Fn [] ()) "hid_task")
+(register led-blinking-task (Fn [] ()) "led_blinking_task")
+
+(defn-do check-macro-press [buttons]
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-0)
+    (Key.press Key.f17))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-1)
+    (Key.press Key.f18))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-2)
+    (Key.press Key.f19))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-3)
+    (Key.press Key.f20))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-4)
+    (Key.press Key.f21))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-5)
+    (Key.press Key.f22))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-6)
+    (Key.press Key.f23))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-7)
+    (Key.press Key.f24)))
+
+(defn-do check-brightness-press [buttons state]
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-8)
+    (State.set-brightness! state (Brightness.None)))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-9)
+    (State.set-brightness! state (Brightness.Dim)))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-10)
+    (State.set-brightness! state (Brightness.Mid)))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-11)
+    (State.set-brightness! state (Brightness.Bright))))
+
+(defn-do check-layer-press [buttons state layer]
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-12)
+    (do
+      (State.set-layer! state (Layer.One))
+      (State.set-hue! state (HueAnimation.Clockwise (hue-start layer)))))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-13)
+    (do
+      (State.set-layer! state (Layer.Two))
+      (State.set-hue! state (HueAnimation.Clockwise (hue-start layer)))))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-14)
+    (do
+      (State.set-layer! state (Layer.Three))
+      (State.set-hue! state (HueAnimation.Clockwise (hue-start layer)))))
+  (when (PicoKeypad.pressed buttons PicoKeypad.key-15)
+    (do
+      (State.set-layer! state (Layer.Four))
+      (State.set-hue! state (HueAnimation.Clockwise (hue-start layer))))))
+
 (defn-do main []
+  (Board.init)
+  (Usb.init)
   (PicoKeypad.init)
   (let [state (State.init (Layer.One)
                           (HueAnimation.Clockwise (hue-start &(Layer.One)))
@@ -87,35 +140,17 @@
     (while true
      (let-do [buttons (PicoKeypad.get-buttons-state) layer (State.layer &state)]
        (PicoKeypad.set-brightness (get-brightness (State.brightness &state)))
+       (Usb.task)
+       (hid-task)
+       ; (led-blinking-task)
        (State.set-hue! &state (update-hue layer (State.hue &state)))
        (for [i 0 PicoKeypad.pads-number]
          (let [rgb &(RGB.transform-hue (RGB 255b 0b 0b) (+ @(get-hue-degree (State.hue &state)) (Float.from-int (* i 5))))]
            (PicoKeypad.illuminate i @(RGB.r rgb) @(RGB.g rgb) @(RGB.b rgb))))
        (when (not (= &buttons (State.last_buttons &state)))
         (do
-          (when (PicoKeypad.pressed buttons PicoKeypad.key-8)
-            (State.set-brightness! &state (Brightness.None)))
-          (when (PicoKeypad.pressed buttons PicoKeypad.key-9)
-            (State.set-brightness! &state (Brightness.Dim)))
-          (when (PicoKeypad.pressed buttons PicoKeypad.key-10)
-            (State.set-brightness! &state (Brightness.Mid)))
-          (when (PicoKeypad.pressed buttons PicoKeypad.key-11)
-            (State.set-brightness! &state (Brightness.Bright)))
-          (when (PicoKeypad.pressed buttons PicoKeypad.key-12)
-            (do
-              (State.set-layer! &state (Layer.One))
-              (State.set-hue! &state (HueAnimation.Clockwise (hue-start layer)))))
-          (when (PicoKeypad.pressed buttons PicoKeypad.key-13)
-            (do
-              (State.set-layer! &state (Layer.Two))
-              (State.set-hue! &state (HueAnimation.Clockwise (hue-start layer)))))
-          (when (PicoKeypad.pressed buttons PicoKeypad.key-14)
-            (do
-              (State.set-layer! &state (Layer.Three))
-              (State.set-hue! &state (HueAnimation.Clockwise (hue-start layer)))))
-          (when (PicoKeypad.pressed buttons PicoKeypad.key-15)
-            (do
-              (State.set-layer! &state (Layer.Four))
-              (State.set-hue! &state (HueAnimation.Clockwise (hue-start layer)))))))
+          (check-macro-press buttons)
+          (check-brightness-press buttons &state)
+          (check-layer-press buttons &state layer)))
        (PicoKeypad.update)))))
 

@@ -14,6 +14,7 @@ pico_sdk_init()
 include_directories(
   ${CMAKE_CURRENT_LIST_DIR}
   $ENV{CARP_DIR}/core
+  lib
 )
 
 add_subdirectory(pimoroni-pico/common)
@@ -30,7 +31,9 @@ add_custom_command(
 
 # Source files
 add_executable(${NAME}
+  lib/usb_descriptors.c
   lib/keypad.cpp
+  lib/usb.c
   ${CMAKE_CURRENT_BINARY_DIR}/carp-out/main.c
 )
 
@@ -38,6 +41,8 @@ add_executable(${NAME}
 target_link_libraries(${NAME}
   pico_stdlib
   pico_rgb_keypad
+  tinyusb_device
+  tinyusb_board
 )
 
 pico_add_extra_outputs(${NAME})

@@ -1,0 +1,18 @@
+(load "usb.carp")
+
+(register-type Key "int")
+(defmodule Key
+  (register press (Fn [Key] ()) "press_key")
+  (deftemplate f13 Key "const int $NAME = HID_KEY_F13" "")
+  (deftemplate f14 Key "const int $NAME = HID_KEY_F14" "")
+  (deftemplate f15 Key "const int $NAME = HID_KEY_F15" "")
+  (deftemplate f16 Key "const int $NAME = HID_KEY_F16" "")
+  (deftemplate f17 Key "const int $NAME = HID_KEY_F17" "")
+  (deftemplate f18 Key "const int $NAME = HID_KEY_F18" "")
+  (deftemplate f19 Key "const int $NAME = HID_KEY_F19" "")
+  (deftemplate f20 Key "const int $NAME = HID_KEY_F20" "")
+  (deftemplate f21 Key "const int $NAME = HID_KEY_F21" "")
+  (deftemplate f22 Key "const int $NAME = HID_KEY_F22" "")
+  (deftemplate f23 Key "const int $NAME = HID_KEY_F23" "")
+  (deftemplate f24 Key "const int $NAME = HID_KEY_F24" ""))
+

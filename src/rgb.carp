@@ -1,5 +1,3 @@
-(load "../deps.carp")
-
 (deftype RGB [r Byte g Byte b Byte])
 
 (defmodule RGB
